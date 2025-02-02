@@ -21,7 +21,7 @@ export const DocumentUploader: React.FC<DocumentUploaderProps> = ({
             setFile(selectedFile);
             setError(null);
         } else {
-            setError('Please select a valid PDF file');
+            setError('Por favor selecciona un archivo PDF');
             setFile(null);
         }
     };
