@@ -1,9 +1,9 @@
 'use client';
 
 import { useState } from 'react';
-import { DocumentUploader } from '@/components/document-validator/DocumentUploader';
-import { ValidationResultsView } from '@/components/document-validator/ValidationResults';
 import type { ValidationResults as ValidationResultsType } from '@/types/document-validator';
+import ModernDocumentUploader from "@/components/document-validator/ModernDocumentUploader";
+import {DocumentAnalysisView} from "@/components/document-validator/DocumentAnalysisView";
 
 export default function DocumentValidatorPage() {
   const [results, setResults] = useState<ValidationResultsType | null>(null);
@@ -19,9 +19,9 @@ export default function DocumentValidatorPage() {
   return (
       <div className="min-h-screen bg-gray-100 p-8">
         {results ? (
-            <ValidationResultsView results={results} onReset={handleReset} />
+            <DocumentAnalysisView results={results} onReset={handleReset} />
         ) : (
-            <DocumentUploader onValidationComplete={handleValidationComplete} />
+            <ModernDocumentUploader onValidationComplete={handleValidationComplete} />
         )}
       </div>
   );
