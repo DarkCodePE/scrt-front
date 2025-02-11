@@ -18,7 +18,6 @@ export const validateDocument = async (file: File, personName: string): Promise<
         throw new Error('Se requiere el nombre de la persona');
     }
 
-    // Validar tipo de archivo
     if (!file.type.toLowerCase().endsWith('pdf')) {
         throw new Error('Solo se aceptan archivos PDF');
     }
@@ -28,47 +27,51 @@ export const validateDocument = async (file: File, personName: string): Promise<
     formData.append('person_name', personName.trim());
 
     try {
-        const response = await fetch(`${VALIDATOR_SERVER}/document/v2/validate`, {
-            method: 'POST',
-            body: formData,
-        });
+        const { data } = await axios.post<ValidationResults>(
+            `${VALIDATOR_SERVER}/document/v2/validate`,
+            formData,
+            {
+                headers: {
+                    'Content-Type': 'multipart/form-data',
+                },
+                validateStatus: (status) => status === 200,
+            }
+        );
 
-        if (!response.ok) {
-            // Intentar obtener el mensaje de error detallado
-            try {
-                const errorData = await response.json();
-                throw new Error(errorData.detail || 'Error en la validación');
-            } catch {
-                // Si no podemos parsear el error, usar mensaje genérico
-                if (response.status === 400) {
-                    throw new Error('Archivo inválido o datos faltantes');
-                } else if (response.status === 413) {
+        return data;
+
+    } catch (error) {
+        if (axios.isAxiosError(error)) {
+            const axiosError = error as AxiosError<ValidationError>;
+
+            if (axiosError.response) {
+                const status = axiosError.response.status;
+                const errorMessage = axiosError.response.data?.detail;
+
+                if (status === 400) {
+                    throw new Error(errorMessage || 'Archivo inválido o datos faltantes');
+                } else if (status === 413) {
                     throw new Error('El archivo es demasiado grande');
-                } else {
-                    throw new Error('Error en el proceso de validación');
                 }
+
+                throw new Error(errorMessage || 'Error en el proceso de validación');
+            }
+
+            if (axiosError.request) {
+                throw new Error('No se pudo conectar con el servidor');
             }
         }
 
-        return await response.json();
-
-    } catch (error) {
-        // Manejar errores específicos
         if (error instanceof Error) {
             console.error('Error validando documento:', error);
-
-            // Mostrar notificación de error
             toast.error(error.message || 'Error procesando el documento');
-
             throw error;
         }
 
-        // Error desconocido
         throw new Error('Error inesperado al validar el documento');
     }
 };
 
-// Helper para verificar si un error es del tipo ValidationError
 export const isValidationError = (error: unknown): error is ValidationError => {
     return (
         typeof error === 'object' &&
@@ -78,10 +81,10 @@ export const isValidationError = (error: unknown): error is ValidationError => {
     );
 };
 
-// Función helper para extraer el mensaje de error más relevante
 export const getErrorMessage = (error: unknown): string => {
-    if (isValidationError(error)) {
-        return error.detail;
+    if (axios.isAxiosError(error)) {
+        const axiosError = error as AxiosError<ValidationError>;
+        return axiosError.response?.data?.detail || axiosError.message;
     }
     if (error instanceof Error) {
         return error.message;
