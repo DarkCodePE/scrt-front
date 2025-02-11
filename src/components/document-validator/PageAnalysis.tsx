@@ -23,7 +23,7 @@ interface PageAnalysisProps {
     };
 }
 
-const PageAnalysis: React.FC<PageAnalysisProps> = ({ pageNumber, pageData }) => {
+export const PageAnalysis: React.FC<PageAnalysisProps> = ({ pageNumber, pageData }) => {
     const { diagnostics, observation, signatures, logos } = pageData;
 
     return (
