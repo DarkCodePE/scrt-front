@@ -2,7 +2,7 @@ import { ValidationResults } from "@/types/document-validator";
 import axios, { AxiosError } from 'axios';
 import { toast } from 'react-hot-toast';
 
-const VALIDATOR_SERVER = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:9002';
+const VALIDATOR_SERVER = process.env.NEXT_PUBLIC_VALIDATOR_SERVER || 'http://localhost:9002';
 
 /**
  * Creamos una instancia de Axios configurada con la URL base del servicio.
