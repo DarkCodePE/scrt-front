@@ -6,7 +6,6 @@ const VALIDATOR_SERVER = process.env.NEXT_PUBLIC_VALIDATOR_SERVER || 'http://loc
 
 /**
  * Creamos una instancia de Axios configurada con la URL base del servicio.
- * Esto nos permite centralizar la configuración y mantener el código desacoplado.
  */
 const validatorApi = axios.create({
     baseURL: VALIDATOR_SERVER,
@@ -17,15 +16,27 @@ interface ValidationError {
     detail: string;
 }
 
+const formatDate = (date: string): string => {
+    if (!date) return '';
+    // Convertir YYYY-MM-DD a DD/MM/YYYY
+    const [year, month, day] = date.split('-');
+    return `${day}/${month}/${year}`;
+};
+
 /**
  * Valida un documento PDF enviándolo al servicio de validación.
  *
  * @param file - Archivo a validar.
  * @param personName - Nombre de la persona asociada al documento.
+ * @param referenceDate - Fecha de referencia opcional para la validación.
  * @returns Una promesa que resuelve en los resultados de la validación.
  * @throws Error con mensaje detallado en caso de fallo.
  */
-export const validateDocument = async (file: File, personName: string): Promise<ValidationResults> => {
+export const validateDocument = async (
+    file: File,
+    personName: string,
+    referenceDate?: string
+): Promise<ValidationResults> => {
     // Validaciones previas
     if (!file) {
         throw new Error('Se requiere un archivo PDF');
@@ -39,49 +50,76 @@ export const validateDocument = async (file: File, personName: string): Promise<
         throw new Error('Solo se aceptan archivos PDF');
     }
 
-    // Construir el FormData para enviar el archivo y el nombre
+    // Construir el FormData para enviar el archivo y datos adicionales
     const formData = new FormData();
     formData.append('file', file);
     formData.append('person_name', personName.trim());
 
+    // Agregar fecha de referencia si está presente
+    if (referenceDate) {
+        formData.append('user_date', formatDate(referenceDate) );
+    }
+
     try {
-        // Se utiliza la instancia de axios para enviar el POST.
-        const response = await validatorApi.post('/document/v2/validate', formData, {
+        // Realizar la petición POST con axios
+        const response = await validatorApi.post<ValidationResults>('/document/v2/validate', formData, {
             headers: {
                 'Content-Type': 'multipart/form-data',
             },
+            timeout: 60000, // 30 segundos de timeout
         });
 
-        // Se asume que la respuesta cumple con el contrato de ValidationResults.
-        return response.data as ValidationResults;
+        return response.data;
 
     } catch (error) {
         let errorMessage = 'Error inesperado al validar el documento';
 
         if (axios.isAxiosError(error)) {
-            if (error.response) {
-                const { status, data } = error.response;
-                // Se intenta extraer un mensaje detallado del servidor.
-                if (data && data.detail) {
+            const axiosError = error as AxiosError<ValidationError>;
+
+            // Manejar timeout
+            if (error.code === 'ECONNABORTED') {
+                errorMessage = 'La solicitud ha excedido el tiempo límite. Por favor, inténtelo de nuevo.';
+            } else if (axiosError.response) {
+                const { status, data } = axiosError.response;
+
+                // Intentar extraer mensaje detallado del servidor
+                if (data?.detail) {
                     errorMessage = data.detail;
                 } else {
-                    // Mensajes de error por defecto según el código de estado.
-                    if (status === 400) {
-                        errorMessage = 'Archivo inválido o datos faltantes';
-                    } else if (status === 413) {
-                        errorMessage = 'El archivo es demasiado grande';
-                    } else {
-                        errorMessage = 'Error en el proceso de validación';
+                    // Mensajes por defecto según código de estado
+                    switch (status) {
+                        case 400:
+                            errorMessage = 'Archivo inválido o datos faltantes';
+                            break;
+                        case 413:
+                            errorMessage = 'El archivo es demasiado grande';
+                            break;
+                        case 401:
+                            errorMessage = 'No autorizado para realizar esta operación';
+                            break;
+                        case 403:
+                            errorMessage = 'Acceso denegado';
+                            break;
+                        case 404:
+                            errorMessage = 'Servicio no encontrado';
+                            break;
+                        case 500:
+                            errorMessage = 'Error interno del servidor';
+                            break;
+                        default:
+                            errorMessage = 'Error en el proceso de validación';
                     }
                 }
-            } else {
-                errorMessage = error.message;
+            } else if (axiosError.request) {
+                errorMessage = 'No se pudo conectar con el servidor. Verifique su conexión a internet.';
             }
         } else if (error instanceof Error) {
             errorMessage = error.message;
         }
 
-        console.error('Error validando documento:', error);
+        // Log del error para debugging
+        console.error('[Document Validator Error]:', error);
         toast.error(errorMessage);
 
         throw new Error(errorMessage);
@@ -89,32 +127,45 @@ export const validateDocument = async (file: File, personName: string): Promise<
 };
 
 /**
- * Helper para verificar si un error es del tipo ValidationError.
- *
- * @param error - Error a evaluar.
- * @returns true si el error tiene la estructura de ValidationError.
+ * Type guard mejorado para ValidationError
  */
 export const isValidationError = (error: unknown): error is ValidationError => {
     return (
         typeof error === 'object' &&
         error !== null &&
         'status_code' in error &&
-        'detail' in error
+        typeof (error as ValidationError).status_code === 'number' &&
+        'detail' in error &&
+        typeof (error as ValidationError).detail === 'string'
     );
 };
 
 /**
- * Extrae el mensaje de error más relevante a partir del error recibido.
- *
- * @param error - Error del que extraer el mensaje.
- * @returns Mensaje de error descriptivo.
+ * Función helper mejorada para extraer mensajes de error
  */
 export const getErrorMessage = (error: unknown): string => {
-    if (isValidationError(error)) {
-        return error.detail;
+    if (axios.isAxiosError(error)) {
+        const axiosError = error as AxiosError<ValidationError>;
+
+        // Verificar si hay un mensaje de error personalizado en la respuesta
+        if (axiosError.response?.data && isValidationError(axiosError.response.data)) {
+            return axiosError.response.data.detail;
+        }
+
+        // Manejar errores de red
+        if (error.code === 'ECONNABORTED') {
+            return 'La conexión ha excedido el tiempo límite';
+        }
+        if (!axiosError.response) {
+            return 'Error de conexión con el servidor';
+        }
+
+        return axiosError.message;
     }
+
     if (error instanceof Error) {
         return error.message;
     }
+
     return 'Error inesperado al validar el documento';
 };

@@ -14,7 +14,7 @@ import {
 
 interface ValidationStatusProps {
     finalVerdict: {
-        verdict: boolean;
+        verdict: string;
         reason: string;
         details: {
             logo_validation_passed: boolean;
@@ -24,6 +24,39 @@ interface ValidationStatusProps {
         };
     };
 }
+
+const getVerdictColor = (verdict: string) => {
+    switch (verdict) {
+        case "Válido":
+            return "bg-green-500/10 text-green-500";
+        case "Observado":
+            return "bg-yellow-500/10 text-yellow-500";
+        default:
+            return "bg-red-500/10 text-red-500";
+    }
+};
+
+const getVerdictIcon = (verdict: string) => {
+    switch (verdict) {
+        case "Válido":
+            return <CheckCircle2 className="w-12 h-12" />;
+        case "Observado":
+            return <AlertCircle className="w-12 h-12" />;
+        default:
+            return <XCircle className="w-12 h-12" />;
+    }
+};
+
+const getVerdictTitle = (verdict: string) => {
+    switch (verdict) {
+        case "Válido":
+            return "Documento Válido";
+        case "Observado":
+            return "Documento Observado";
+        default:
+            return "Documento Inválido";
+    }
+};
 
 const ValidationItem = ({
                             status,
@@ -64,18 +97,11 @@ export const ValidationStatus: React.FC<ValidationStatusProps> = ({ finalVerdict
                     animate={{ opacity: 1, y: 0 }}
                     className="inline-flex items-center gap-3 mb-6"
                 >
-                    <div className={`p-3 rounded-full ${
-                        finalVerdict.verdict
-                            ? 'bg-green-500/10 text-green-500'
-                            : 'bg-red-500/10 text-red-500'
-                    }`}>
-                        {finalVerdict.verdict
-                            ? <CheckCircle2 className="w-12 h-12" />
-                            : <XCircle className="w-12 h-12" />
-                        }
+                    <div className={`p-3 rounded-full ${getVerdictColor(finalVerdict.verdict)}`}>
+                        {getVerdictIcon(finalVerdict.verdict)}
                     </div>
                     <h1 className="text-4xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-400 via-purple-400 to-pink-400">
-                        {finalVerdict.verdict ? 'Documento Válido' : 'Documento Inválido'}
+                        {getVerdictTitle(finalVerdict.verdict)}
                     </h1>
                 </motion.div>
 

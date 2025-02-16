@@ -23,9 +23,8 @@ export interface ValidationResults {
         verdict: boolean;
         reason: string;
         details: {
-            logo_validation_passed: boolean;
+            policy_validation_passed: boolean;
             validity_validation_passed: boolean;
-            signature_validation_passed: boolean;
             person_validation_passed: boolean;
         };
     }>;
@@ -37,7 +36,7 @@ export interface ValidationResults {
         page_num: number;
     }>;
     final_verdict: {
-        verdict: boolean;
+        verdict: string;
         reason: string;
         details: {
             logo_validation_passed: boolean;

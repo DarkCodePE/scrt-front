@@ -1,9 +1,64 @@
 import React, { useState } from 'react';
-import { Upload, File, Loader2, CloudOff, User } from 'lucide-react';
+import {Upload, File, Loader2, CloudOff, User, Calendar} from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { toast } from 'react-hot-toast';
 import { validateDocument } from '@/services/document-validator';
 import { ValidationResults } from '@/types/document-validator';
+
+// Definir las variantes de animación
+const formVariants = {
+    hidden: {
+        opacity: 0,
+        y: 50,
+        scale: 0.95
+    },
+    visible: {
+        opacity: 1,
+        y: 0,
+        scale: 1,
+        transition: {
+            duration: 0.5,
+            ease: "easeOut",
+            staggerChildren: 0.1
+        }
+    }
+};
+
+const inputVariants = {
+    hidden: {
+        opacity: 0,
+        x: -20,
+        scale: 0.95
+    },
+    visible: {
+        opacity: 1,
+        x: 0,
+        scale: 1,
+        transition: {
+            duration: 0.3,
+            ease: "easeOut"
+        }
+    }
+};
+
+const buttonVariants = {
+    initial: {
+        scale: 1,
+        boxShadow: "0 0 0 rgba(59, 130, 246, 0)"
+    },
+    hover: {
+        scale: 1.02,
+        boxShadow: "0 0 20px rgba(59, 130, 246, 0.3)"
+    },
+    tap: {
+        scale: 0.98,
+        boxShadow: "0 0 0 rgba(59, 130, 246, 0)"
+    },
+    disabled: {
+        scale: 1,
+        opacity: 0.7
+    }
+};
 
 interface ModernDocumentUploaderProps {
     onValidationComplete: (results: ValidationResults) => void;
@@ -16,6 +71,7 @@ const ModernDocumentUploader: React.FC<ModernDocumentUploaderProps> = ({
                                                                        }) => {
     const [file, setFile] = useState<File | null>(null);
     const [personName, setPersonName] = useState('');
+    const [referenceDate, setReferenceDate] = useState(null);
     const [isUploading, setIsUploading] = useState(false);
     const [uploadProgress, setUploadProgress] = useState(0);
     const [error, setError] = useState<string | null>(null);
@@ -71,12 +127,20 @@ const ModernDocumentUploader: React.FC<ModernDocumentUploaderProps> = ({
         setUploadProgress(0);
         setError(null);
 
+        const formData = new FormData();
+        formData.append('file', file);
+        formData.append('person_name', personName.trim());
+        if (referenceDate) {
+            formData.append('user_date', referenceDate);
+        }
+
         const progressInterval = setInterval(() => {
             setUploadProgress(prev => Math.min(prev + 10, 90));
         }, 200);
 
         try {
-            const results = await validateDocument(file, personName);
+            // @ts-ignore
+            const results = await validateDocument(file, personName, referenceDate);
             clearInterval(progressInterval);
             setUploadProgress(100);
             onValidationComplete(results);
@@ -91,36 +155,67 @@ const ModernDocumentUploader: React.FC<ModernDocumentUploaderProps> = ({
     return (
         <div className="max-w-2xl mx-auto">
             <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
+                variants={formVariants}
+                initial="hidden"
+                animate="visible"
                 className="bg-gradient-to-br from-gray-900 to-gray-800 rounded-xl p-8 shadow-2xl"
             >
-                <h2 className="text-3xl font-bold text-center mb-8 bg-clip-text text-transparent bg-gradient-to-r from-blue-400 to-purple-400">
+                <motion.h2
+                    variants={inputVariants}
+                    className="text-3xl font-bold text-center mb-8 bg-clip-text text-transparent bg-gradient-to-r from-blue-400 to-purple-400 [text-shadow:_0_1px_2px_rgb(0_0_0_/_20%)]"
+                >
                     Validador de Documentos
-                </h2>
+                </motion.h2>
 
                 {/* Campo de Nombre */}
-                <div className="mb-6">
+                <motion.div
+                    variants={inputVariants}
+                    className="mb-6"
+                >
                     <label htmlFor="person-name" className="block text-gray-300 mb-2">
                         Nombre de la Persona
                     </label>
-                    <div className="relative">
-                        <User className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+                    <div className="relative group">
+                        <User className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5 transition-colors group-hover:text-blue-400"/>
                         <input
                             id="person-name"
                             type="text"
                             value={personName}
                             onChange={(e) => setPersonName(e.target.value)}
-                            className="w-full bg-gray-800 text-gray-100 rounded-lg pl-12 pr-4 py-3 border border-gray-700 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none transition-all"
+                            className="w-full bg-gray-800 text-gray-100 rounded-lg pl-12 pr-4 py-3 border border-gray-700 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none transition-all group-hover:border-blue-400/50"
                             placeholder="Ingresa el nombre de la persona"
-                            aria-label="Nombre de la persona"
                             required
                         />
                     </div>
-                </div>
+                </motion.div>
 
-                {/* Área de Carga de Archivos */}
-                <div
+                {/* Campo de Fecha */}
+                <motion.div
+                    variants={inputVariants}
+                    className="mb-6"
+                >
+                    <label htmlFor="reference-date" className="block text-gray-300 mb-2">
+                        Fecha de Referencia (Opcional)
+                    </label>
+                    <div className="relative group">
+                        <Calendar className="absolute
+                        left-3 top-1/2 transform
+                        -translate-y-1/2 text-gray-400
+                        w-5 h-5 transition-colors
+                        group-hover:text-blue-400" />
+                        <input
+                            id="reference-date"
+                            type="date"
+                            value={referenceDate}
+                            onChange={(e) => setReferenceDate(e.target.value)}
+                            className="w-full bg-gray-800 text-gray-100 rounded-lg pl-12 pr-4 py-3 border border-gray-700 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none transition-all group-hover:border-blue-400/50"
+                        />
+                    </div>
+                </motion.div>
+
+                {/* Área de Carga */}
+                <motion.div
+                    variants={inputVariants}
                     onDragEnter={handleDragEnter}
                     onDragOver={(e) => e.preventDefault()}
                     onDragLeave={handleDragLeave}
@@ -130,9 +225,6 @@ const ModernDocumentUploader: React.FC<ModernDocumentUploaderProps> = ({
                             ? 'border-blue-400 bg-blue-400/10'
                             : 'border-gray-600 hover:border-gray-500'
                     }`}
-                    role="button"
-                    tabIndex={0}
-                    aria-label="Área de carga de archivos"
                 >
                     <input
                         type="file"
@@ -140,21 +232,26 @@ const ModernDocumentUploader: React.FC<ModernDocumentUploaderProps> = ({
                         onChange={handleFileChange}
                         className="hidden"
                         id="file-upload"
-                        aria-label="Seleccionar archivo PDF"
                     />
                     <label
                         htmlFor="file-upload"
                         className="cursor-pointer flex flex-col items-center"
                     >
                         <motion.div
-                            whileHover={{ scale: 1.05 }}
+                            whileHover={{ scale: 1.05, rotate: 5 }}
                             whileTap={{ scale: 0.95 }}
                             className="mb-4"
                         >
                             {file ? (
-                                <File className="w-16 h-16 text-blue-400" />
+                                <motion.div
+                                    initial={{ rotate: 0 }}
+                                    animate={{ rotate: 360 }}
+                                    transition={{ duration: 0.5 }}
+                                >
+                                    <File className="w-16 h-16 text-blue-400"/>
+                                </motion.div>
                             ) : (
-                                <Upload className="w-16 h-16 text-gray-400" />
+                                <Upload className="w-16 h-16 text-gray-400"/>
                             )}
                         </motion.div>
                         <span className="text-gray-300 text-center">
@@ -166,7 +263,7 @@ const ModernDocumentUploader: React.FC<ModernDocumentUploaderProps> = ({
                             Tamaño máximo: {maxFileSize / (1024 * 1024)}MB
                         </span>
                     </label>
-                </div>
+                </motion.div>
 
                 {/* Mensajes de Error */}
                 <AnimatePresence>
@@ -178,7 +275,7 @@ const ModernDocumentUploader: React.FC<ModernDocumentUploaderProps> = ({
                             className="mt-4 p-4 rounded-lg bg-red-500/10 border border-red-500/20"
                         >
                             <div className="flex items-center gap-2 text-red-400">
-                                <CloudOff className="w-5 h-5" />
+                                <CloudOff className="w-5 h-5"/>
                                 <span>{error}</span>
                             </div>
                         </motion.div>
@@ -187,35 +284,54 @@ const ModernDocumentUploader: React.FC<ModernDocumentUploaderProps> = ({
 
                 {/* Barra de Progreso */}
                 {isUploading && (
-                    <div className="mt-6 space-y-4">
+                    <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        className="mt-6 space-y-4"
+                    >
                         <div className="w-full h-2 bg-gray-700 rounded-full overflow-hidden">
                             <motion.div
                                 initial={{ width: 0 }}
-                                animate={{ width: `${uploadProgress}%` }}
+                                animate={{
+                                    width: `${uploadProgress}%`,
+                                    transition: { duration: 0.3, ease: "easeInOut" }
+                                }}
                                 className="h-full bg-gradient-to-r from-blue-500 to-purple-500"
                             />
                         </div>
                         <div className="flex items-center justify-center text-gray-400">
-                            <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                            <Loader2 className="w-4 h-4 animate-spin mr-2"/>
                             <span>Procesando documento... {uploadProgress}%</span>
                         </div>
-                    </div>
+                    </motion.div>
                 )}
 
                 {/* Botón de Envío */}
                 <motion.button
-                    whileHover={{ scale: 1.02 }}
-                    whileTap={{ scale: 0.98 }}
+                    variants={buttonVariants}
+                    initial="initial"
+                    whileHover="hover"
+                    whileTap="tap"
+                    animate={(!file || !personName.trim() || isUploading) ? "disabled" : "initial"}
                     disabled={!file || !personName.trim() || isUploading}
                     onClick={handleUpload}
-                    className={`w-full mt-6 py-3 px-4 rounded-lg font-medium transition-all ${
+                    className={`w-full mt-6 py-3 px-4 rounded-lg font-medium transition-colors relative overflow-hidden ${
                         !file || !personName.trim() || isUploading
                             ? 'bg-gray-700 text-gray-500 cursor-not-allowed'
-                            : 'bg-gradient-to-r from-blue-500 to-purple-500 text-white hover:shadow-lg hover:shadow-blue-500/20'
+                            : 'bg-gradient-to-r from-blue-500 to-purple-500 text-white'
                     }`}
-                    aria-busy={isUploading}
                 >
                     {isUploading ? 'Procesando...' : 'Validar Documento'}
+                    <motion.div
+                        className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent"
+                        initial={{ x: "-100%" }}
+                        animate={{ x: "200%" }}
+                        transition={{
+                            repeat: Infinity,
+                            duration: 2,
+                            ease: "linear"
+                        }}
+                    />
                 </motion.button>
             </motion.div>
         </div>
