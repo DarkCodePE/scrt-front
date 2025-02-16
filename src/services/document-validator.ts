@@ -56,7 +56,7 @@ export const validateDocument = async (
     formData.append('person_name', personName.trim());
 
     // Agregar fecha de referencia si está presente
-    if (referenceDate) {
+    if (referenceDate && referenceDate.trim()) {
         formData.append('user_date', formatDate(referenceDate) );
     }
 

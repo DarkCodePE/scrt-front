@@ -71,7 +71,7 @@ const ModernDocumentUploader: React.FC<ModernDocumentUploaderProps> = ({
                                                                        }) => {
     const [file, setFile] = useState<File | null>(null);
     const [personName, setPersonName] = useState('');
-    const [referenceDate, setReferenceDate] = useState(null);
+    const [referenceDate, setReferenceDate] = useState('');
     const [isUploading, setIsUploading] = useState(false);
     const [uploadProgress, setUploadProgress] = useState(0);
     const [error, setError] = useState<string | null>(null);
@@ -126,13 +126,6 @@ const ModernDocumentUploader: React.FC<ModernDocumentUploaderProps> = ({
         setIsUploading(true);
         setUploadProgress(0);
         setError(null);
-
-        const formData = new FormData();
-        formData.append('file', file);
-        formData.append('person_name', personName.trim());
-        if (referenceDate) {
-            formData.append('user_date', referenceDate);
-        }
 
         const progressInterval = setInterval(() => {
             setUploadProgress(prev => Math.min(prev + 10, 90));
