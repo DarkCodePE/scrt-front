@@ -66,7 +66,7 @@ export const validateDocument = async (
             headers: {
                 'Content-Type': 'multipart/form-data',
             },
-            timeout: 600000, // 30 segundos de timeout
+            timeout: 12000000, // 30 segundos de timeout
         });
 
         return response.data;
