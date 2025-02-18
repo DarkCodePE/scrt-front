@@ -17,12 +17,15 @@ export default function DocumentValidatorPage() {
   };
 
   return (
-      <div className="min-h-screen bg-gray-100 p-8">
+      <main className="min-h-screen w-full relative overflow-hidden">
+
+        <div className="container mx-auto px-4 py-8">
         {results ? (
             <DocumentAnalysisView results={results} onReset={handleReset} />
         ) : (
             <ModernDocumentUploader onValidationComplete={handleValidationComplete} />
         )}
-      </div>
+        </div>
+      </main>
   );
 }
