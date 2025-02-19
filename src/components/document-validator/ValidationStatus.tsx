@@ -31,6 +31,8 @@ const getVerdictColor = (verdict: string) => {
             return "bg-green-500/10 text-green-500";
         case "Observado":
             return "bg-yellow-500/10 text-yellow-500";
+        case "observado":
+            return "bg-yellow-500/10 text-yellow-500";
         default:
             return "bg-red-500/10 text-red-500";
     }
@@ -42,6 +44,8 @@ const getVerdictIcon = (verdict: string) => {
             return <CheckCircle2 className="w-12 h-12" />;
         case "Observado":
             return <AlertCircle className="w-12 h-12" />;
+        case "observado":
+            return <AlertCircle className="w-12 h-12" />;
         default:
             return <XCircle className="w-12 h-12" />;
     }
@@ -52,6 +56,8 @@ const getVerdictTitle = (verdict: string) => {
         case "Válido":
             return "Documento Válido";
         case "Observado":
+            return "Documento Observado";
+        case "observado":
             return "Documento Observado";
         default:
             return "Documento Inválido";
