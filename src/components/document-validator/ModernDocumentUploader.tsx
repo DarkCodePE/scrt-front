@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import {Upload, File, Loader2, CloudOff, User, Calendar} from 'lucide-react';
+import { Upload, File, Loader2, CloudOff, User, Calendar, CreditCard } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { toast } from 'react-hot-toast';
 import { validateDocument } from '@/services/document-validator';
@@ -70,12 +70,26 @@ const ModernDocumentUploader: React.FC<ModernDocumentUploaderProps> = ({
                                                                            maxFileSize = 10 * 1024 * 1024
                                                                        }) => {
     const [file, setFile] = useState<File | null>(null);
-    const [personName, setPersonName] = useState('');
+    const [personIdentifier, setPersonIdentifier] = useState('');
+    const [identifierType, setIdentifierType] = useState<'name' | 'dni'>('name');
     const [referenceDate, setReferenceDate] = useState('');
     const [isUploading, setIsUploading] = useState(false);
     const [uploadProgress, setUploadProgress] = useState(0);
     const [error, setError] = useState<string | null>(null);
     const [isDragging, setIsDragging] = useState(false);
+
+    // Detectar automáticamente si es DNI o nombre cuando el usuario escribe
+    const handleIdentifierChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const value = e.target.value;
+        setPersonIdentifier(value);
+
+        // Verificar si es un DNI (8 dígitos)
+        if (/^\d{8}$/.test(value)) {
+            setIdentifierType('dni');
+        } else {
+            setIdentifierType('name');
+        }
+    };
 
     const validateFile = (file: File): boolean => {
         if (file.type !== 'application/pdf') {
@@ -118,8 +132,8 @@ const ModernDocumentUploader: React.FC<ModernDocumentUploaderProps> = ({
     };
 
     const handleUpload = async () => {
-        if (!file || !personName.trim()) {
-            setError('Por favor proporciona un archivo PDF y el nombre de la persona');
+        if (!file || !personIdentifier.trim()) {
+            setError('Por favor proporciona un archivo PDF y un identificador (nombre o DNI)');
             return;
         }
 
@@ -133,7 +147,7 @@ const ModernDocumentUploader: React.FC<ModernDocumentUploaderProps> = ({
 
         try {
             // @ts-ignore
-            const results = await validateDocument(file, personName, referenceDate);
+            const results = await validateDocument(file, personIdentifier, referenceDate);
             clearInterval(progressInterval);
             setUploadProgress(100);
             onValidationComplete(results);
@@ -160,26 +174,35 @@ const ModernDocumentUploader: React.FC<ModernDocumentUploaderProps> = ({
                     Validador de Documentos
                 </motion.h2>
 
-                {/* Campo de Nombre */}
+                {/* Campo de Identificador (Nombre o DNI) */}
                 <motion.div
                     variants={inputVariants}
                     className="mb-6"
                 >
-                    <label htmlFor="person-name" className="block text-gray-300 mb-2">
-                        Nombre de la Persona
+                    <label htmlFor="person-identifier" className="block text-gray-300 mb-2">
+                        {identifierType === 'dni' ? 'DNI (8 dígitos)' : 'Nombre de la Persona'}
                     </label>
                     <div className="relative group">
-                        <User className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5 transition-colors group-hover:text-blue-400"/>
+                        {identifierType === 'dni' ? (
+                            <CreditCard className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5 transition-colors group-hover:text-blue-400"/>
+                        ) : (
+                            <User className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5 transition-colors group-hover:text-blue-400"/>
+                        )}
                         <input
-                            id="person-name"
+                            id="person-identifier"
                             type="text"
-                            value={personName}
-                            onChange={(e) => setPersonName(e.target.value)}
+                            value={personIdentifier}
+                            onChange={handleIdentifierChange}
                             className="w-full bg-gray-800 text-gray-100 rounded-lg pl-12 pr-4 py-3 border border-gray-700 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none transition-all group-hover:border-blue-400/50"
-                            placeholder="Ingresa el nombre de la persona"
+                            placeholder={identifierType === 'dni' ? "Ingresa el DNI (8 dígitos)" : "Ingresa el nombre de la persona"}
                             required
                         />
                     </div>
+                    <p className="mt-1 text-xs text-gray-400">
+                        {identifierType === 'dni'
+                            ? "Se detectó un DNI válido"
+                            : "Ingresa un nombre o un DNI de 8 dígitos"}
+                    </p>
                 </motion.div>
 
                 {/* Campo de Fecha */}
@@ -191,11 +214,7 @@ const ModernDocumentUploader: React.FC<ModernDocumentUploaderProps> = ({
                         Fecha de Referencia (Opcional)
                     </label>
                     <div className="relative group">
-                        <Calendar className="absolute
-                        left-3 top-1/2 transform
-                        -translate-y-1/2 text-gray-400
-                        w-5 h-5 transition-colors
-                        group-hover:text-blue-400" />
+                        <Calendar className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5 transition-colors group-hover:text-blue-400" />
                         <input
                             id="reference-date"
                             type="date"
@@ -305,11 +324,11 @@ const ModernDocumentUploader: React.FC<ModernDocumentUploaderProps> = ({
                     initial="initial"
                     whileHover="hover"
                     whileTap="tap"
-                    animate={(!file || !personName.trim() || isUploading) ? "disabled" : "initial"}
-                    disabled={!file || !personName.trim() || isUploading}
+                    animate={(!file || !personIdentifier.trim() || isUploading) ? "disabled" : "initial"}
+                    disabled={!file || !personIdentifier.trim() || isUploading}
                     onClick={handleUpload}
                     className={`w-full mt-6 py-3 px-4 rounded-lg font-medium transition-colors relative overflow-hidden ${
-                        !file || !personName.trim() || isUploading
+                        !file || !personIdentifier.trim() || isUploading
                             ? 'bg-gray-700 text-gray-500 cursor-not-allowed'
                             : 'bg-gradient-to-r from-blue-500 to-purple-500 text-white'
                     }`}
